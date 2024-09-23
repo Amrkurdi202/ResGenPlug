@@ -27,8 +27,8 @@ public class EntityFieldScannerMojo extends AbstractMojo {
   private File resourcesDirectory;
 
   private static final String ENTITY_SUPERCLASS = "Entity";
-  private static final String FLD_SUPERCLASS = "Fld";
-  private Map<String, String> classHierarchy;
+  private static final String RES_SUPERCLASS = "Res";
+  private Map<String, Set<String>> classHierarchy;
   private File[] propertyFiles;
   private Map<String, Properties> properties;
 
@@ -87,9 +87,8 @@ public class EntityFieldScannerMojo extends AbstractMojo {
 
       classDeclaration.findAll(FieldDeclaration.class).forEach(field -> {
         for (VariableDeclarator variable : field.getVariables()) {
-          getLog().info("Found field: " + variable.getNameAsString());
-          if (isAncestor(variable.getTypeAsString(), FLD_SUPERCLASS, classHierarchy)) {
-            getLog().info("Found FLD: " + variable.getNameAsString());
+          if (isAncestor(variable.getTypeAsString(), RES_SUPERCLASS, classHierarchy)
+          ||isAncestor(variable.getTypeAsString(), ENTITY_SUPERCLASS, classHierarchy)) {
             fieldNames.add(variable.getNameAsString());
           }
         }
@@ -99,30 +98,34 @@ public class EntityFieldScannerMojo extends AbstractMojo {
     }
   }
 
-  private static class ClassVisitor extends VoidVisitorAdapter<Map<String, String>> {
+  private static class ClassVisitor extends VoidVisitorAdapter<Map<String, Set<String>>> {
     @Override
-    public void visit(ClassOrInterfaceDeclaration cid, Map<String, String> classHierarchy) {
+    public void visit(ClassOrInterfaceDeclaration cid, Map<String, Set<String>> classHierarchy) {
       super.visit(cid, classHierarchy);
       String className = cid.getNameAsString();
+      Set<String> supers = classHierarchy.computeIfAbsent(className, k -> new HashSet<>());
       cid.getExtendedTypes().forEach(extendedType -> {
         String superClassName = extendedType.getNameAsString();
-        classHierarchy.put(className, superClassName);
+        supers.add(superClassName);
       });
       cid.getImplementedTypes().forEach(implementedType -> {
         String interfaceName = implementedType.getNameAsString();
-        classHierarchy.put(className, interfaceName);
+        supers.add(interfaceName);
       });
     }
   }
 
-  private static boolean isAncestor(String className, String potentialAncestor, Map<String, String> classHierarchy) {
-    String currentClass = className;
-    while (classHierarchy.containsKey(currentClass)) {
-      String superClass = classHierarchy.get(currentClass);
-      if (superClass.equals(potentialAncestor)) {
-        return true;
+  private boolean isAncestor(String className, String potentialAncestor, Map<String, Set<String>> classHierarchy) {
+    if (classHierarchy.containsKey(className)) {
+      Set<String> superClasses = classHierarchy.get(className);
+      for (String superClass : superClasses) {
+        if (superClass.equals(potentialAncestor)) {
+          return true;
+        }
       }
-      currentClass = superClass;
+      for (String superClass : superClasses) {
+        return isAncestor(superClass, potentialAncestor, classHierarchy);
+      }
     }
     return false;
   }
