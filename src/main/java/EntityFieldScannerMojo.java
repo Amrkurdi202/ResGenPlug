@@ -28,14 +28,8 @@ public class EntityFieldScannerMojo extends AbstractMojo {
     private static final String ENTITY_SUPERCLASS = "Entity";
     private static final String RES_SUPERCLASS = "Res";
 
-    private static final String MULTI_ENTITIES_REFERENCES = "InternalMultiEntitiesReferences";
-
-    private static final String CUSTOM_FIELD = "CustomField";
-
     private static final String[] POTENTIAL_ANCESTORS = {RES_SUPERCLASS,
-            ENTITY_SUPERCLASS,
-            MULTI_ENTITIES_REFERENCES,
-            CUSTOM_FIELD};
+            ENTITY_SUPERCLASS};
 
     private Map<String, Set<String>> classHierarchy;
     private File[] propertyFiles;
